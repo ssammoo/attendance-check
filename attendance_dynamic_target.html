@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>출석 체크 (현재 위치 기준)</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet.js 스타일시트 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-sA+z0ymfLw+MytwMZTzO5LkDJ6n0Qz8RyU7nU5u3t+0=" crossorigin=""/>
+
+  <!-- Leaflet.js 라이브러리 -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-o9N1j8Mk64Q0VI1c4TJi+HEN0k+yoCk5ZmP+WsmjCZo=" crossorigin=""></script>
+
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>출석 체크 시스템 (현재 위치 기준)</h1>
+  <button onclick="checkLocation()">출석 체크</button>
+  <p id="status"></p>
+  <div id="map"></div>
+
+  <script>
+    let map, userMarker, targetCircle;
+    const radius = 100; // meters
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const φ1 = lat1 * Math.PI/180;
+      const φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2 - lat1) * Math.PI/180;
+      const Δλ = (lon2 - lon1) * Math.PI/180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function checkLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+
+          const targetLat = userLat;
+          const targetLng = userLng;
+
+          const distance = getDistance(userLat, userLng, targetLat, targetLng);
+
+          document.getElementById("status").innerText =
+            `출석 성공!\n현재 위치: ${userLat.toFixed(5)}, ${userLng.toFixed(5)}\n거리: ${distance.toFixed(1)}m`;
+
+          if (!map) {
+            map = L.map('map').setView([userLat, userLng], 17);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            targetCircle = L.circle([targetLat, targetLng], {
+              color: 'blue',
+              fillColor: '#30f',
+              fillOpacity: 0.2,
+              radius: radius
+            }).addTo(map).bindPopup("출석 가능 구역").openPopup();
+
+            userMarker = L.marker([userLat, userLng]).addTo(map)
+                          .bindPopup("현재 위치").openPopup();
+          } else {
+            userMarker.setLatLng([userLat, userLng]);
+            map.setView([userLat, userLng]);
+          }
+        }, function(error) {
+          document.getElementById("status").innerText = "위치 정보를 가져올 수 없습니다.";
+        });
+      } else {
+        document.getElementById("status").innerText = "이 브라우저는 위치 정보를 지원하지 않습니다.";
+      }
+    }
+  </script>
+</body>
+</html>
